@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oxford 3000</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.container {
+    width: 100%;
+    max-width: 600px;
+    background: white;
+    padding: 35px;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    text-align: center;
+}
+h1 { margin: 0; font-size: 36px; }
+.subtitle { color: #777; margin-top: 8px; }
+.status {
+    display: flex;
+    justify-content: space-between;
+    background: #f3f4f6;
+    padding: 12px 18px;
+    border-radius: 12px;
+    margin: 25px 0;
+}
+.question-box { margin: 25px 0; }
+.question-box p { color: #777; }
+#word {
+    font-size: 42px;
+    margin: 15px 0;
+    color: #222;
+}
+#choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.choice {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background: white;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.choice:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: #f3f4f6;
+    border-color: #667eea;
+}
+.choice:disabled { cursor: default; opacity: 0.8; }
+#result {
+    min-height: 30px;
+    margin: 20px 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+#nextButton {
+    display: none;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 12px;
+    background: #222;
+    color: white;
+    font-size: 17px;
+    cursor: pointer;
+}
+#nextButton:hover { background: #444; }
+@media (max-width: 500px) {
+    .container { padding: 25px 18px; }
+    h1 { font-size: 28px; }
+    #word { font-size: 34px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>📚 Oxford 3000</h1>
+    <p class="subtitle">ฝึกจำคำศัพท์ภาษาอังกฤษ • คลังคำศัพท์ 550 คำ</p>
+
+    <div class="status">
+        <span id="questionNumber">ข้อ 1 / 50</span>
+        <span>คะแนน <b id="score">0</b></span>
+    </div>
+
+    <div class="question-box">
+        <p>คำนี้หมายความว่าอะไร?</p>
+        <h2 id="word">กำลังโหลด...</h2>
+    </div>
+
+    <div id="choices"></div>
+    <div id="result"></div>
+
+    <button id="nextButton" onclick="nextQuestion()">ข้อต่อไป →</button>
+</div>
+
+<script>
+const words = [
+    { word: "abandon", meaning: "ละทิ้ง" },
+    { word: "ability", meaning: "ความสามารถ" },
+    { word: "accept", meaning: "ยอมรับ" },
+    { word: "achieve", meaning: "บรรลุ" },
+    { word: "active", meaning: "กระตือรือร้น" },
+    { word: "actual", meaning: "ที่แท้จริง" },
+    { word: "admit", meaning: "ยอมรับ" },
+    { word: "advantage", meaning: "ข้อได้เปรียบ" },
+    { word: "afford", meaning: "สามารถจ่ายได้" },
+    { word: "allow", meaning: "อนุญาต" },
+    { word: "amazing", meaning: "น่าทึ่ง" },
+    { word: "ancient", meaning: "โบราณ" },
+    { word: "appear", meaning: "ปรากฏ" },
+    { word: "apply", meaning: "สมัคร / ใช้" },
+    { word: "argue", meaning: "โต้เถียง" },
+    { word: "arrange", meaning: "จัดเตรียม" },
+    { word: "arrive", meaning: "มาถึง" },
+    { word: "avoid", meaning: "หลีกเลี่ยง" },
+    { word: "aware", meaning: "ตระหนัก / รู้ตัว" },
+    { word: "beautiful", meaning: "สวยงาม" },
+    { word: "begin", meaning: "เริ่มต้น" },
+    { word: "believe", meaning: "เชื่อ" },
+    { word: "benefit", meaning: "ประโยชน์" },
+    { word: "borrow", meaning: "ยืม" },
+    { word: "brave", meaning: "กล้าหาญ" },
+    { word: "brief", meaning: "สั้น / กระชับ" },
+    { word: "calm", meaning: "สงบ" },
+    { word: "cancel", meaning: "ยกเลิก" },
+    { word: "careful", meaning: "ระมัดระวัง" },
+    { word: "celebrate", meaning: "เฉลิมฉลอง" },
+    { word: "certain", meaning: "แน่นอน" },
+    { word: "change", meaning: "เปลี่ยนแปลง" },
+    { word: "choose", meaning: "เลือก" },
+    { word: "common", meaning: "ทั่วไป" },
+    { word: "compare", meaning: "เปรียบเทียบ" },
+    { word: "complete", meaning: "เสร็จสมบูรณ์" },
+    { word: "continue", meaning: "ดำเนินต่อ" },
+    { word: "correct", meaning: "ถูกต้อง" },
+    { word: "create", meaning: "สร้าง" },
+    { word: "decide", meaning: "ตัดสินใจ" },
+    { word: "describe", meaning: "บรรยาย / อธิบาย" },
+    { word: "develop", meaning: "พัฒนา" },
+    { word: "different", meaning: "แตกต่าง" },
+    { word: "difficult", meaning: "ยาก" },
+    { word: "discover", meaning: "ค้นพบ" },
+    { word: "early", meaning: "เร็ว / แต่เนิ่นๆ" },
+    { word: "education", meaning: "การศึกษา" },
+    { word: "effect", meaning: "ผลกระทบ" },
+    { word: "enough", meaning: "เพียงพอ" },
+    { word: "example", meaning: "ตัวอย่าง" },
+    { word: "absence", meaning: "การไม่อยู่" },
+    { word: "absolute", meaning: "สมบูรณ์" },
+    { word: "absorb", meaning: "ดูดซับ" },
+    { word: "abuse", meaning: "ใช้ในทางที่ผิด" },
+    { word: "academic", meaning: "ด้านวิชาการ" },
+    { word: "access", meaning: "การเข้าถึง" },
+    { word: "accident", meaning: "อุบัติเหตุ" },
+    { word: "accompany", meaning: "ไปเป็นเพื่อน" },
+    { word: "account", meaning: "บัญชี" },
+    { word: "accurate", meaning: "ถูกต้องแม่นยำ" },
+    { word: "accuse", meaning: "กล่าวหา" },
+    { word: "achievable", meaning: "ที่ทำได้" },
+    { word: "acquire", meaning: "ได้รับ" },
+    { word: "adapt", meaning: "ปรับตัว" },
+    { word: "addition", meaning: "การเพิ่มเติม" },
+    { word: "additional", meaning: "เพิ่มเติม" },
+    { word: "address", meaning: "ที่อยู่" },
+    { word: "adequate", meaning: "เพียงพอ" },
+    { word: "adjust", meaning: "ปรับ" },
+    { word: "admire", meaning: "ชื่นชม" },
+    { word: "advice", meaning: "คำแนะนำ" },
+    { word: "affect", meaning: "ส่งผลกระทบ" },
+    { word: "agreement", meaning: "ข้อตกลง" },
+    { word: "alcohol", meaning: "แอลกอฮอล์" },
+    { word: "alive", meaning: "มีชีวิต" },
+    { word: "alternative", meaning: "ทางเลือก" },
+    { word: "announce", meaning: "ประกาศ" },
+    { word: "annoy", meaning: "รบกวน" },
+    { word: "annual", meaning: "ประจำปี" },
+    { word: "anxious", meaning: "วิตกกังวล" },
+    { word: "apologize", meaning: "ขอโทษ" },
+    { word: "apparent", meaning: "ชัดเจน" },
+    { word: "appeal", meaning: "การอุทธรณ์" },
+    { word: "appointment", meaning: "การนัดหมาย" },
+    { word: "appreciate", meaning: "ซาบซึ้ง" },
+    { word: "approach", meaning: "เข้าใกล้" },
+    { word: "appropriate", meaning: "เหมาะสม" },
+    { word: "approval", meaning: "การอนุมัติ" },
+    { word: "arrangement", meaning: "การจัดเตรียม" },
+    { word: "assistant", meaning: "ผู้ช่วย" },
+    { word: "assume", meaning: "สันนิษฐาน" },
+    { word: "attempt", meaning: "พยายาม" },
+    { word: "attend", meaning: "เข้าร่วม" },
+    { word: "attention", meaning: "ความสนใจ" },
+    { word: "attitude", meaning: "ทัศนคติ" },
+    { word: "attract", meaning: "ดึงดูด" },
+    { word: "average", meaning: "ค่าเฉลี่ย" },
+    { word: "avoidance", meaning: "การหลีกเลี่ยง" },
+    { word: "background", meaning: "ภูมิหลัง" },
+    { word: "balance", meaning: "สมดุล" },
+    { word: "basic", meaning: "พื้นฐาน" },
+    { word: "battery", meaning: "แบตเตอรี่" },
+    { word: "behavior", meaning: "พฤติกรรม" },
+    { word: "belong", meaning: "เป็นของ" },
+    { word: "beside", meaning: "ข้างๆ" },
+    { word: "beyond", meaning: "เกินกว่า" },
+    { word: "blame", meaning: "ตำหนิ" },
+    { word: "blood", meaning: "เลือด" },
+    { word: "board", meaning: "กระดาน" },
+    { word: "bother", meaning: "รบกวน" },
+    { word: "boundary", meaning: "ขอบเขต" },
+    { word: "branch", meaning: "สาขา" },
+    { word: "brand", meaning: "ยี่ห้อ" },
+    { word: "breakdown", meaning: "การเสีย" },
+    { word: "breath", meaning: "ลมหายใจ" },
+    { word: "breathe", meaning: "หายใจ" },
+    { word: "brilliant", meaning: "ยอดเยี่ยม" },
+    { word: "broadcast", meaning: "ออกอากาศ" },
+    { word: "budget", meaning: "งบประมาณ" },
+    { word: "business", meaning: "ธุรกิจ" },
+    { word: "campaign", meaning: "การรณรงค์" },
+    { word: "candidate", meaning: "ผู้สมัคร" },
+    { word: "capacity", meaning: "ความจุ" },
+    { word: "capture", meaning: "จับ" },
+    { word: "career", meaning: "อาชีพ" },
+    { word: "cause", meaning: "สาเหตุ" },
+    { word: "challenge", meaning: "ความท้าทาย" },
+    { word: "chance", meaning: "โอกาส" },
+    { word: "character", meaning: "ตัวละคร" },
+    { word: "charge", meaning: "เรียกเก็บเงิน" },
+    { word: "choice", meaning: "ทางเลือก" },
+    { word: "circumstance", meaning: "สถานการณ์" },
+    { word: "citizen", meaning: "พลเมือง" },
+    { word: "claim", meaning: "อ้าง" },
+    { word: "clear", meaning: "ชัดเจน" },
+    { word: "climate", meaning: "ภูมิอากาศ" },
+    { word: "closely", meaning: "อย่างใกล้ชิด" },
+    { word: "coach", meaning: "ผู้ฝึกสอน" },
+    { word: "combine", meaning: "รวม" },
+    { word: "comfort", meaning: "ความสะดวกสบาย" },
+    { word: "command", meaning: "คำสั่ง" },
+    { word: "comment", meaning: "ความคิดเห็น" },
+    { word: "communicate", meaning: "สื่อสาร" },
+    { word: "community", meaning: "ชุมชน" },
+    { word: "complain", meaning: "ร้องเรียน" },
+    { word: "complex", meaning: "ซับซ้อน" },
+    { word: "concentrate", meaning: "มีสมาธิ" },
+    { word: "concern", meaning: "ความกังวล" },
+    { word: "condition", meaning: "เงื่อนไข" },
+    { word: "confidence", meaning: "ความมั่นใจ" },
+    { word: "confirm", meaning: "ยืนยัน" },
+    { word: "conflict", meaning: "ความขัดแย้ง" },
+    { word: "connect", meaning: "เชื่อมต่อ" },
+    { word: "consequence", meaning: "ผลที่ตามมา" },
+    { word: "consider", meaning: "พิจารณา" },
+    { word: "consist", meaning: "ประกอบด้วย" },
+    { word: "constant", meaning: "คงที่" },
+    { word: "contact", meaning: "ติดต่อ" },
+    { word: "contain", meaning: "บรรจุ" },
+    { word: "context", meaning: "บริบท" },
+    { word: "contrast", meaning: "ความแตกต่าง" },
+    { word: "contribute", meaning: "มีส่วนช่วย" },
+    { word: "control", meaning: "ควบคุม" },
+    { word: "convenient", meaning: "สะดวก" },
+    { word: "convince", meaning: "โน้มน้าว" },
+    { word: "cost", meaning: "ค่าใช้จ่าย" },
+    { word: "courage", meaning: "ความกล้าหาญ" },
+    { word: "crash", meaning: "ชน" },
+    { word: "crazy", meaning: "บ้าคลั่ง" },
+    { word: "credit", meaning: "เครดิต" },
+    { word: "crime", meaning: "อาชญากรรม" },
+    { word: "crowd", meaning: "ฝูงชน" },
+    { word: "culture", meaning: "วัฒนธรรม" },
+    { word: "curious", meaning: "อยากรู้อยากเห็น" },
+    { word: "damage", meaning: "ความเสียหาย" },
+    { word: "danger", meaning: "อันตราย" },
+    { word: "deal", meaning: "จัดการ" },
+    { word: "debate", meaning: "การอภิปราย" },
+    { word: "decade", meaning: "ทศวรรษ" },
+    { word: "decline", meaning: "ลดลง" },
+    { word: "decrease", meaning: "ลดลง" },
+    { word: "deep", meaning: "ลึก" },
+    { word: "defeat", meaning: "เอาชนะ" },
+    { word: "defend", meaning: "ป้องกัน" },
+    { word: "define", meaning: "กำหนดความหมาย" },
+    { word: "degree", meaning: "ระดับ" },
+    { word: "delay", meaning: "ล่าช้า" },
+    { word: "deliver", meaning: "ส่งมอบ" },
+    { word: "demand", meaning: "ความต้องการ" },
+    { word: "deny", meaning: "ปฏิเสธ" },
+    { word: "depend", meaning: "ขึ้นอยู่กับ" },
+    { word: "despite", meaning: "แม้ว่า" },
+    { word: "detail", meaning: "รายละเอียด" },
+    { word: "determine", meaning: "กำหนด" },
+    { word: "device", meaning: "อุปกรณ์" },
+    { word: "difference", meaning: "ความแตกต่าง" },
+    { word: "direct", meaning: "โดยตรง" },
+    { word: "disappear", meaning: "หายไป" },
+    { word: "disappoint", meaning: "ทำให้ผิดหวัง" },
+    { word: "discuss", meaning: "อภิปราย" },
+    { word: "disease", meaning: "โรค" },
+    { word: "distance", meaning: "ระยะทาง" },
+    { word: "divide", meaning: "แบ่ง" },
+    { word: "document", meaning: "เอกสาร" },
+    { word: "double", meaning: "สองเท่า" },
+    { word: "doubt", meaning: "สงสัย" },
+    { word: "dramatic", meaning: "น่าตื่นเต้น" },
+    { word: "earn", meaning: "หาเงิน" },
+    { word: "economic", meaning: "ทางเศรษฐกิจ" },
+    { word: "economy", meaning: "เศรษฐกิจ" },
+    { word: "efficient", meaning: "มีประสิทธิภาพ" },
+    { word: "effort", meaning: "ความพยายาม" },
+    { word: "elderly", meaning: "สูงอายุ" },
+    { word: "emergency", meaning: "เหตุฉุกเฉิน" },
+    { word: "employ", meaning: "จ้างงาน" },
+    { word: "employee", meaning: "ลูกจ้าง" },
+    { word: "employer", meaning: "นายจ้าง" },
+    { word: "encourage", meaning: "สนับสนุน" },
+    { word: "energy", meaning: "พลังงาน" },
+    { word: "engage", meaning: "มีส่วนร่วม" },
+    { word: "entire", meaning: "ทั้งหมด" },
+    { word: "environment", meaning: "สิ่งแวดล้อม" },
+    { word: "equal", meaning: "เท่าเทียม" },
+    { word: "escape", meaning: "หลบหนี" },
+    { word: "essential", meaning: "จำเป็น" },
+    { word: "establish", meaning: "ก่อตั้ง" },
+    { word: "estimate", meaning: "ประมาณการ" },
+    { word: "event", meaning: "เหตุการณ์" },
+    { word: "evidence", meaning: "หลักฐาน" },
+    { word: "exact", meaning: "แน่นอน" },
+    { word: "exchange", meaning: "แลกเปลี่ยน" },
+    { word: "exist", meaning: "มีอยู่" },
+    { word: "expand", meaning: "ขยาย" },
+    { word: "experience", meaning: "ประสบการณ์" },
+    { word: "experiment", meaning: "การทดลอง" },
+    { word: "expert", meaning: "ผู้เชี่ยวชาญ" },
+    { word: "explain", meaning: "อธิบาย" },
+    { word: "express", meaning: "แสดงออก" },
+    { word: "extend", meaning: "ขยาย" },
+    { word: "failure", meaning: "ความล้มเหลว" },
+    { word: "familiar", meaning: "คุ้นเคย" },
+    { word: "feature", meaning: "คุณลักษณะ" },
+    { word: "figure", meaning: "ตัวเลข" },
+    { word: "final", meaning: "สุดท้าย" },
+    { word: "finance", meaning: "การเงิน" },
+    { word: "focus", meaning: "มุ่งเน้น" },
+    { word: "force", meaning: "บังคับ" },
+    { word: "foreign", meaning: "ต่างประเทศ" },
+    { word: "formal", meaning: "เป็นทางการ" },
+    { word: "former", meaning: "อดีต" },
+    { word: "freedom", meaning: "เสรีภาพ" },
+    { word: "frequently", meaning: "บ่อยครั้ง" },
+    { word: "function", meaning: "หน้าที่" },
+    { word: "future", meaning: "อนาคต" },
+    { word: "general", meaning: "ทั่วไป" },
+    { word: "government", meaning: "รัฐบาล" },
+    { word: "gradually", meaning: "ทีละน้อย" },
+    { word: "grant", meaning: "มอบให้" },
+    { word: "growth", meaning: "การเติบโต" },
+    { word: "handle", meaning: "จัดการ" },
+    { word: "harm", meaning: "อันตราย" },
+    { word: "health", meaning: "สุขภาพ" },
+    { word: "heavily", meaning: "อย่างมาก" },
+    { word: "helpful", meaning: "มีประโยชน์" },
+    { word: "honest", meaning: "ซื่อสัตย์" },
+    { word: "however", meaning: "อย่างไรก็ตาม" },
+    { word: "identity", meaning: "อัตลักษณ์" },
+    { word: "ignore", meaning: "เพิกเฉย" },
+    { word: "impact", meaning: "ผลกระทบ" },
+    { word: "improve", meaning: "ปรับปรุง" },
+    { word: "include", meaning: "รวมถึง" },
+    { word: "increase", meaning: "เพิ่มขึ้น" },
+    { word: "independent", meaning: "เป็นอิสระ" },
+    { word: "individual", meaning: "บุคคล" },
+    { word: "industry", meaning: "อุตสาหกรรม" },
+    { word: "influence", meaning: "อิทธิพล" },
+    { word: "inform", meaning: "แจ้ง" },
+    { word: "information", meaning: "ข้อมูล" },
+    { word: "initial", meaning: "เริ่มแรก" },
+    { word: "instead", meaning: "แทน" },
+    { word: "intelligent", meaning: "ฉลาด" },
+    { word: "intention", meaning: "ความตั้งใจ" },
+    { word: "introduce", meaning: "แนะนำ" },
+    { word: "involve", meaning: "เกี่ยวข้อง" },
+    { word: "issue", meaning: "ประเด็น" },
+    { word: "item", meaning: "รายการ" },
+    { word: "judge", meaning: "ตัดสิน" },
+    { word: "knowledge", meaning: "ความรู้" },
+    { word: "language", meaning: "ภาษา" },
+    { word: "legal", meaning: "ถูกกฎหมาย" },
+    { word: "likely", meaning: "มีแนวโน้ม" },
+    { word: "limit", meaning: "จำกัด" },
+    { word: "local", meaning: "ท้องถิ่น" },
+    { word: "maintain", meaning: "รักษา" },
+    { word: "major", meaning: "สำคัญ" },
+    { word: "manage", meaning: "จัดการ" },
+    { word: "material", meaning: "วัสดุ" },
+    { word: "measure", meaning: "วัด" },
+    { word: "method", meaning: "วิธีการ" },
+    { word: "minor", meaning: "เล็กน้อย" },
+    { word: "mistake", meaning: "ความผิดพลาด" },
+    { word: "modern", meaning: "สมัยใหม่" },
+    { word: "movement", meaning: "การเคลื่อนไหว" },
+    { word: "necessary", meaning: "จำเป็น" },
+    { word: "negative", meaning: "เชิงลบ" },
+    { word: "notice", meaning: "สังเกต" },
+    { word: "obtain", meaning: "ได้รับ" },
+    { word: "obvious", meaning: "ชัดเจน" },
+    { word: "occasion", meaning: "โอกาส" },
+    { word: "occur", meaning: "เกิดขึ้น" },
+    { word: "offer", meaning: "เสนอ" },
+    { word: "official", meaning: "เป็นทางการ" },
+    { word: "operate", meaning: "ดำเนินงาน" },
+    { word: "opinion", meaning: "ความคิดเห็น" },
+    { word: "opportunity", meaning: "โอกาส" },
+    { word: "ordinary", meaning: "ธรรมดา" },
+    { word: "organize", meaning: "จัดระเบียบ" },
+    { word: "original", meaning: "ดั้งเดิม" },
+    { word: "otherwise", meaning: "มิฉะนั้น" },
+    { word: "participate", meaning: "เข้าร่วม" },
+    { word: "particular", meaning: "เฉพาะ" },
+    { word: "patient", meaning: "อดทน" },
+    { word: "pattern", meaning: "รูปแบบ" },
+    { word: "perform", meaning: "ปฏิบัติ" },
+    { word: "period", meaning: "ช่วงเวลา" },
+    { word: "permit", meaning: "อนุญาต" },
+    { word: "personal", meaning: "ส่วนบุคคล" },
+    { word: "physical", meaning: "ทางกายภาพ" },
+    { word: "policy", meaning: "นโยบาย" },
+    { word: "popular", meaning: "เป็นที่นิยม" },
+    { word: "positive", meaning: "เชิงบวก" },
+    { word: "possible", meaning: "เป็นไปได้" },
+    { word: "potential", meaning: "ศักยภาพ" },
+    { word: "prepare", meaning: "เตรียม" },
+    { word: "prevent", meaning: "ป้องกัน" },
+    { word: "previous", meaning: "ก่อนหน้า" },
+    { word: "primary", meaning: "หลัก" },
+    { word: "private", meaning: "ส่วนตัว" },
+    { word: "process", meaning: "กระบวนการ" },
+    { word: "produce", meaning: "ผลิต" },
+    { word: "professional", meaning: "มืออาชีพ" },
+    { word: "progress", meaning: "ความก้าวหน้า" },
+    { word: "project", meaning: "โครงการ" },
+    { word: "protect", meaning: "ปกป้อง" },
+    { word: "provide", meaning: "จัดหา" },
+    { word: "public", meaning: "สาธารณะ" },
+    { word: "purpose", meaning: "จุดประสงค์" },
+    { word: "quality", meaning: "คุณภาพ" },
+    { word: "quantity", meaning: "ปริมาณ" },
+    { word: "raise", meaning: "ยกขึ้น" },
+    { word: "range", meaning: "ช่วง" },
+    { word: "rather", meaning: "ค่อนข้าง" },
+    { word: "realize", meaning: "ตระหนัก" },
+    { word: "reason", meaning: "เหตุผล" },
+    { word: "receive", meaning: "ได้รับ" },
+    { word: "recent", meaning: "เมื่อไม่นานมานี้" },
+    { word: "recognize", meaning: "จำได้" },
+    { word: "recommend", meaning: "แนะนำ" },
+    { word: "reduce", meaning: "ลด" },
+    { word: "refer", meaning: "อ้างถึง" },
+    { word: "reflect", meaning: "สะท้อน" },
+    { word: "refuse", meaning: "ปฏิเสธ" },
+    { word: "regard", meaning: "ถือว่า" },
+    { word: "region", meaning: "ภูมิภาค" },
+    { word: "regular", meaning: "สม่ำเสมอ" },
+    { word: "relationship", meaning: "ความสัมพันธ์" },
+    { word: "remain", meaning: "ยังคงอยู่" },
+    { word: "remove", meaning: "นำออก" },
+    { word: "require", meaning: "ต้องการ" },
+    { word: "research", meaning: "การวิจัย" },
+    { word: "respond", meaning: "ตอบสนอง" },
+    { word: "responsible", meaning: "รับผิดชอบ" },
+    { word: "result", meaning: "ผลลัพธ์" },
+    { word: "reveal", meaning: "เปิดเผย" },
+    { word: "review", meaning: "ทบทวน" },
+    { word: "risk", meaning: "ความเสี่ยง" },
+    { word: "role", meaning: "บทบาท" },
+    { word: "routine", meaning: "กิจวัตร" },
+    { word: "salary", meaning: "เงินเดือน" },
+    { word: "satisfy", meaning: "ทำให้พอใจ" },
+    { word: "save", meaning: "ประหยัด" },
+    { word: "security", meaning: "ความปลอดภัย" },
+    { word: "select", meaning: "เลือก" },
+    { word: "serious", meaning: "จริงจัง" },
+    { word: "similar", meaning: "คล้ายกัน" },
+    { word: "simple", meaning: "เรียบง่าย" },
+    { word: "social", meaning: "ทางสังคม" },
+    { word: "solution", meaning: "วิธีแก้ปัญหา" },
+    { word: "source", meaning: "แหล่งที่มา" },
+    { word: "specific", meaning: "เฉพาะเจาะจง" },
+    { word: "standard", meaning: "มาตรฐาน" },
+    { word: "state", meaning: "สถานะ" },
+    { word: "statement", meaning: "คำแถลง" },
+    { word: "strength", meaning: "ความแข็งแรง" },
+    { word: "structure", meaning: "โครงสร้าง" },
+    { word: "suggest", meaning: "แนะนำ" },
+    { word: "support", meaning: "สนับสนุน" },
+    { word: "surface", meaning: "พื้นผิว" },
+    { word: "survive", meaning: "อยู่รอด" },
+    { word: "system", meaning: "ระบบ" },
+    { word: "task", meaning: "งาน" },
+    { word: "technology", meaning: "เทคโนโลยี" },
+    { word: "temporary", meaning: "ชั่วคราว" },
+    { word: "theory", meaning: "ทฤษฎี" },
+    { word: "therefore", meaning: "ดังนั้น" },
+    { word: "though", meaning: "แม้ว่า" },
+    { word: "threat", meaning: "ภัยคุกคาม" },
+    { word: "traditional", meaning: "ดั้งเดิม" },
+    { word: "training", meaning: "การฝึกอบรม" },
+    { word: "treat", meaning: "ปฏิบัติต่อ" },
+    { word: "trend", meaning: "แนวโน้ม" },
+    { word: "trust", meaning: "ความไว้วางใจ" },
+    { word: "typical", meaning: "โดยทั่วไป" },
+    { word: "unable", meaning: "ไม่สามารถ" },
+    { word: "unique", meaning: "มีเอกลักษณ์" },
+    { word: "unless", meaning: "เว้นแต่" },
+    { word: "update", meaning: "ปรับปรุงข้อมูล" },
+    { word: "useful", meaning: "มีประโยชน์" },
+    { word: "usual", meaning: "ปกติ" },
+    { word: "variety", meaning: "ความหลากหลาย" },
+    { word: "various", meaning: "หลากหลาย" },
+    { word: "vehicle", meaning: "ยานพาหนะ" },
+    { word: "victory", meaning: "ชัยชนะ" },
+    { word: "violence", meaning: "ความรุนแรง" },
+    { word: "visible", meaning: "มองเห็นได้" },
+    { word: "visit", meaning: "เยี่ยมชม" },
+    { word: "volunteer", meaning: "อาสาสมัคร" },
+    { word: "whole", meaning: "ทั้งหมด" },
+    { word: "wild", meaning: "ป่า" },
+    { word: "willing", meaning: "เต็มใจ" },
+    { word: "wonder", meaning: "สงสัย" },
+    { word: "worker", meaning: "คนงาน" },
+    { word: "worry", meaning: "กังวล" },
+    { word: "abroad", meaning: "ต่างประเทศ" },
+    { word: "accessory", meaning: "อุปกรณ์เสริม" },
+    { word: "achievement", meaning: "ความสำเร็จ" },
+    { word: "activity", meaning: "กิจกรรม" },
+    { word: "administration", meaning: "การบริหาร" },
+    { word: "adult", meaning: "ผู้ใหญ่" },
+    { word: "advance", meaning: "ความก้าวหน้า" },
+    { word: "advise", meaning: "แนะนำ" },
+    { word: "affair", meaning: "เรื่อง" },
+    { word: "agency", meaning: "หน่วยงาน" },
+    { word: "agenda", meaning: "วาระ" },
+    { word: "aggressive", meaning: "ก้าวร้าว" },
+    { word: "aid", meaning: "ความช่วยเหลือ" },
+    { word: "alarm", meaning: "สัญญาณเตือน" },
+    { word: "alike", meaning: "เหมือนกัน" },
+    { word: "amuse", meaning: "ทำให้สนุก" },
+    { word: "analysis", meaning: "การวิเคราะห์" },
+    { word: "analyze", meaning: "วิเคราะห์" },
+    { word: "anger", meaning: "ความโกรธ" },
+    { word: "angle", meaning: "มุม" },
+    { word: "apart", meaning: "แยกจากกัน" },
+    { word: "application", meaning: "ใบสมัคร" },
+    { word: "argument", meaning: "ข้อโต้แย้ง" },
+    { word: "arrival", meaning: "การมาถึง" },
+    { word: "article", meaning: "บทความ" },
+    { word: "artist", meaning: "ศิลปิน" },
+    { word: "aspect", meaning: "แง่มุม" },
+    { word: "assignment", meaning: "งานที่ได้รับมอบหมาย" },
+    { word: "assistance", meaning: "ความช่วยเหลือ" },
+    { word: "atmosphere", meaning: "บรรยากาศ" },
+    { word: "authority", meaning: "อำนาจ" },
+    { word: "automatic", meaning: "อัตโนมัติ" },
+    { word: "available", meaning: "พร้อมใช้งาน" },
+    { word: "beneficial", meaning: "เป็นประโยชน์" },
+    { word: "birth", meaning: "การเกิด" },
+    { word: "block", meaning: "บล็อก" },
+    { word: "briefly", meaning: "โดยสังเขป" },
+    { word: "celebration", meaning: "การเฉลิมฉลอง" },
+    { word: "central", meaning: "ส่วนกลาง" },
+    { word: "chemical", meaning: "สารเคมี" },
+    { word: "classic", meaning: "คลาสสิก" },
+    { word: "collection", meaning: "คอลเลกชัน" },
+    { word: "comfortable", meaning: "สะดวกสบาย" },
+    { word: "competition", meaning: "การแข่งขัน" },
+    { word: "complaint", meaning: "การร้องเรียน" },
+    { word: "conclusion", meaning: "ข้อสรุป" },
+    { word: "conduct", meaning: "ดำเนินการ" },
+    { word: "consumer", meaning: "ผู้บริโภค" },
+    { word: "conversation", meaning: "การสนทนา" },
+    { word: "cooperate", meaning: "ร่วมมือ" },
+    { word: "critical", meaning: "สำคัญ" },
+    { word: "decision", meaning: "การตัดสินใจ" },
+    { word: "definition", meaning: "คำจำกัดความ" },
+    { word: "department", meaning: "แผนก" },
+    { word: "description", meaning: "คำบรรยาย" },
+    { word: "development", meaning: "การพัฒนา" },
+    { word: "discussion", meaning: "การอภิปราย" },
+    { word: "effective", meaning: "มีประสิทธิผล" },
+    { word: "employment", meaning: "การจ้างงาน" },
+    { word: "entrance", meaning: "ทางเข้า" },
+    { word: "equipment", meaning: "อุปกรณ์" },
+    { word: "especially", meaning: "โดยเฉพาะ" },
+    { word: "eventually", meaning: "ในที่สุด" },
+    { word: "excuse", meaning: "ข้ออ้าง" },
+    { word: "exercise", meaning: "การออกกำลังกาย" },
+    { word: "existence", meaning: "การมีอยู่" },
+    { word: "expense", meaning: "ค่าใช้จ่าย" },
+    { word: "explanation", meaning: "คำอธิบาย" },
+    { word: "expression", meaning: "การแสดงออก" },
+    { word: "famous", meaning: "มีชื่อเสียง" },
+    { word: "favorite", meaning: "ที่ชื่นชอบ" },
+    { word: "feedback", meaning: "ความคิดเห็นตอบกลับ" },
+    { word: "frequent", meaning: "บ่อย" },
+    { word: "generation", meaning: "รุ่น" },
+    { word: "goal", meaning: "เป้าหมาย" },
+    { word: "habit", meaning: "นิสัย" },
+    { word: "importance", meaning: "ความสำคัญ" },
+    { word: "impression", meaning: "ความประทับใจ" },
+    { word: "improvement", meaning: "การปรับปรุง" },
+    { word: "instruction", meaning: "คำแนะนำ" },
+    { word: "interest", meaning: "ความสนใจ" },
+    { word: "interview", meaning: "การสัมภาษณ์" },
+    { word: "invitation", meaning: "คำเชิญ" },
+    { word: "knowledgeable", meaning: "มีความรู้" },
+    { word: "leadership", meaning: "ภาวะผู้นำ" },
+    { word: "location", meaning: "สถานที่ตั้ง" },
+    { word: "management", meaning: "การจัดการ" },
+    { word: "meaning", meaning: "ความหมาย" },
+    { word: "memory", meaning: "ความจำ" },
+    { word: "message", meaning: "ข้อความ" },
+    { word: "network", meaning: "เครือข่าย" },
+    { word: "normal", meaning: "ปกติ" },
+    { word: "objective", meaning: "วัตถุประสงค์" },
+    { word: "organization", meaning: "องค์กร" },
+    { word: "originally", meaning: "เดิมที" },
+    { word: "performance", meaning: "ประสิทธิภาพ" },
+    { word: "permission", meaning: "การอนุญาต" },
+    { word: "population", meaning: "ประชากร" },
+    { word: "position", meaning: "ตำแหน่ง" },
+    { word: "preparation", meaning: "การเตรียมตัว" },
+    { word: "pressure", meaning: "แรงกดดัน" },
+    { word: "priority", meaning: "ลำดับความสำคัญ" },
+    { word: "problem", meaning: "ปัญหา" },
+    { word: "procedure", meaning: "ขั้นตอน" },
+    { word: "production", meaning: "การผลิต" },
+    { word: "promotion", meaning: "การส่งเสริม" },
+    { word: "protection", meaning: "การป้องกัน" },
+    { word: "reaction", meaning: "ปฏิกิริยา" },
+    { word: "reality", meaning: "ความเป็นจริง" },
+    { word: "recommendation", meaning: "คำแนะนำ" },
+    { word: "reference", meaning: "การอ้างอิง" },
+    { word: "regulation", meaning: "ข้อบังคับ" },
+    { word: "request", meaning: "คำขอ" },
+    { word: "requirement", meaning: "ข้อกำหนด" },
+    { word: "response", meaning: "การตอบสนอง" },
+    { word: "responsibility", meaning: "ความรับผิดชอบ" },
+    { word: "safety", meaning: "ความปลอดภัย" }
+];
+
+let currentWord, correctAnswer, score = 0, questionCount = 0;
+const totalQuestions = 50;
+let usedWords = [];
+
+function nextQuestion() {
+    if (questionCount >= totalQuestions) {
+        showFinalScore();
+        return;
+    }
+
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("nextButton").style.display = "none";
+
+    let availableWords = words.filter(item => !usedWords.includes(item.word));
+    if (availableWords.length === 0) {
+        showFinalScore();
+        return;
+    }
+
+    currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+    usedWords.push(currentWord.word);
+    questionCount++;
+
+    document.getElementById("questionNumber").innerHTML =
+        `ข้อ ${questionCount} / ${totalQuestions}`;
+    document.getElementById("word").innerHTML = currentWord.word;
+    correctAnswer = currentWord.meaning;
+
+    let wrongAnswers = words
+        .filter(item => item.meaning !== correctAnswer)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(item => item.meaning);
+
+    let choices = [correctAnswer, ...wrongAnswers];
+    choices.sort(() => Math.random() - 0.5);
+
+    let html = "";
+    choices.forEach((choice, index) => {
+        const encoded = encodeURIComponent(choice);
+        html += `<button class="choice" onclick="checkAnswer(decodeURIComponent('${encoded}'))">
+            ${String.fromCharCode(65 + index)}. ${choice}
+        </button>`;
+    });
+
+    document.getElementById("choices").innerHTML = html;
+}
+
+function checkAnswer(answer) {
+    document.querySelectorAll(".choice").forEach(button => button.disabled = true);
+
+    let result = document.getElementById("result");
+
+    if (answer === correctAnswer) {
+        score++;
+        document.getElementById("score").innerHTML = score;
+        result.innerHTML = "✅ ถูกต้อง! +1 คะแนน";
+        result.style.color = "green";
+    } else {
+        result.innerHTML = `❌ ผิด! คำตอบคือ "${correctAnswer}"`;
+        result.style.color = "red";
+    }
+
+    document.getElementById("nextButton").style.display = "inline-block";
+}
+
+function showFinalScore() {
+    document.getElementById("word").innerHTML = "🎉 จบการทดสอบ!";
+    document.getElementById("choices").innerHTML = "";
+    document.getElementById("result").innerHTML =
+        `คุณได้ ${score} / ${questionCount} คะแนน`;
+    document.getElementById("nextButton").innerHTML = "🔄 เริ่มใหม่";
+    document.getElementById("nextButton").style.display = "inline-block";
+    document.getElementById("nextButton").onclick = restartQuiz;
+}
+
+function restartQuiz() {
+    score = 0;
+    questionCount = 0;
+    usedWords = [];
+
+    document.getElementById("score").innerHTML = "0";
+    document.getElementById("nextButton").innerHTML = "ข้อต่อไป →";
+    document.getElementById("nextButton").onclick = nextQuestion;
+
+    nextQuestion();
+}
+
+nextQuestion();
+</script>
+</body>
+</html>
