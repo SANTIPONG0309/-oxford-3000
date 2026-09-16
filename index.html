@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oxford 3000</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+.container {
+    width: 100%;
+    max-width: 600px;
+    background: white;
+    padding: 35px;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    text-align: center;
+}
+h1 { margin: 0; font-size: 36px; }
+.subtitle { color: #777; margin-top: 8px; }
+.status {
+    display: flex;
+    justify-content: space-between;
+    background: #f3f4f6;
+    padding: 12px 18px;
+    border-radius: 12px;
+    margin: 25px 0;
+}
+.question-box { margin: 25px 0; }
+.question-box p { color: #777; }
+#word {
+    font-size: 42px;
+    margin: 15px 0;
+    color: #222;
+}
+#choices {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.choice {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background: white;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.choice:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: #f3f4f6;
+    border-color: #667eea;
+}
+.choice:disabled { cursor: default; opacity: 0.8; }
+#result {
+    min-height: 30px;
+    margin: 20px 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+#nextButton {
+    display: none;
+    border: none;
+    padding: 14px 30px;
+    border-radius: 12px;
+    background: #222;
+    color: white;
+    font-size: 17px;
+    cursor: pointer;
+}
+#nextButton:hover { background: #444; }
+@media (max-width: 500px) {
+    .container { padding: 25px 18px; }
+    h1 { font-size: 28px; }
+    #word { font-size: 34px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>📚 Oxford 3000</h1>
+    <p class="subtitle">ฝึกจำคำศัพท์ภาษาอังกฤษ</p>
+
+    <div class="status">
+        <span id="questionNumber">ข้อ 1 / 50</span>
+        <span>คะแนน <b id="score">0</b></span>
+    </div>
+
+    <div class="question-box">
+        <p>คำนี้หมายความว่าอะไร?</p>
+        <h2 id="word">กำลังโหลด...</h2>
+    </div>
+
+    <div id="choices"></div>
+    <div id="result"></div>
+
+    <button id="nextButton" onclick="nextQuestion()">ข้อต่อไป →</button>
+</div>
+
+<script>
+const words = [
+    { word: "abandon", meaning: "ละทิ้ง" },
+    { word: "ability", meaning: "ความสามารถ" },
+    { word: "accept", meaning: "ยอมรับ" },
+    { word: "achieve", meaning: "บรรลุ" },
+    { word: "active", meaning: "กระตือรือร้น" },
+    { word: "actual", meaning: "ที่แท้จริง" },
+    { word: "admit", meaning: "ยอมรับ" },
+    { word: "advantage", meaning: "ข้อได้เปรียบ" },
+    { word: "afford", meaning: "สามารถจ่ายได้" },
+    { word: "allow", meaning: "อนุญาต" },
+    { word: "amazing", meaning: "น่าทึ่ง" },
+    { word: "ancient", meaning: "โบราณ" },
+    { word: "appear", meaning: "ปรากฏ" },
+    { word: "apply", meaning: "สมัคร / ใช้" },
+    { word: "argue", meaning: "โต้เถียง" },
+    { word: "arrange", meaning: "จัดเตรียม" },
+    { word: "arrive", meaning: "มาถึง" },
+    { word: "avoid", meaning: "หลีกเลี่ยง" },
+    { word: "aware", meaning: "ตระหนัก / รู้ตัว" },
+    { word: "beautiful", meaning: "สวยงาม" },
+    { word: "begin", meaning: "เริ่มต้น" },
+    { word: "believe", meaning: "เชื่อ" },
+    { word: "benefit", meaning: "ประโยชน์" },
+    { word: "borrow", meaning: "ยืม" },
+    { word: "brave", meaning: "กล้าหาญ" },
+    { word: "brief", meaning: "สั้น / กระชับ" },
+    { word: "calm", meaning: "สงบ" },
+    { word: "cancel", meaning: "ยกเลิก" },
+    { word: "careful", meaning: "ระมัดระวัง" },
+    { word: "celebrate", meaning: "เฉลิมฉลอง" },
+    { word: "certain", meaning: "แน่นอน" },
+    { word: "change", meaning: "เปลี่ยนแปลง" },
+    { word: "choose", meaning: "เลือก" },
+    { word: "common", meaning: "ทั่วไป" },
+    { word: "compare", meaning: "เปรียบเทียบ" },
+    { word: "complete", meaning: "เสร็จสมบูรณ์" },
+    { word: "continue", meaning: "ดำเนินต่อ" },
+    { word: "correct", meaning: "ถูกต้อง" },
+    { word: "create", meaning: "สร้าง" },
+    { word: "decide", meaning: "ตัดสินใจ" },
+    { word: "describe", meaning: "บรรยาย / อธิบาย" },
+    { word: "develop", meaning: "พัฒนา" },
+    { word: "different", meaning: "แตกต่าง" },
+    { word: "difficult", meaning: "ยาก" },
+    { word: "discover", meaning: "ค้นพบ" },
+    { word: "early", meaning: "เร็ว / แต่เนิ่นๆ" },
+    { word: "education", meaning: "การศึกษา" },
+    { word: "effect", meaning: "ผลกระทบ" },
+    { word: "enough", meaning: "เพียงพอ" },
+    { word: "example", meaning: "ตัวอย่าง" }
+];
+
+let currentWord, correctAnswer, score = 0, questionCount = 0;
+const totalQuestions = 50;
+let usedWords = [];
+
+function nextQuestion() {
+    if (questionCount >= totalQuestions) {
+        showFinalScore();
+        return;
+    }
+
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("nextButton").style.display = "none";
+
+    let availableWords = words.filter(item => !usedWords.includes(item.word));
+    if (availableWords.length === 0) {
+        showFinalScore();
+        return;
+    }
+
+    currentWord = availableWords[Math.floor(Math.random() * availableWords.length)];
+    usedWords.push(currentWord.word);
+    questionCount++;
+
+    document.getElementById("questionNumber").innerHTML =
+        `ข้อ ${questionCount} / ${totalQuestions}`;
+    document.getElementById("word").innerHTML = currentWord.word;
+    correctAnswer = currentWord.meaning;
+
+    let wrongAnswers = words
+        .filter(item => item.meaning !== correctAnswer)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(item => item.meaning);
+
+    let choices = [correctAnswer, ...wrongAnswers];
+    choices.sort(() => Math.random() - 0.5);
+
+    let html = "";
+    choices.forEach((choice, index) => {
+        const encoded = encodeURIComponent(choice);
+        html += `<button class="choice" onclick="checkAnswer(decodeURIComponent('${encoded}'))">
+            ${String.fromCharCode(65 + index)}. ${choice}
+        </button>`;
+    });
+
+    document.getElementById("choices").innerHTML = html;
+}
+
+function checkAnswer(answer) {
+    document.querySelectorAll(".choice").forEach(button => button.disabled = true);
+
+    let result = document.getElementById("result");
+
+    if (answer === correctAnswer) {
+        score++;
+        document.getElementById("score").innerHTML = score;
+        result.innerHTML = "✅ ถูกต้อง! +1 คะแนน";
+        result.style.color = "green";
+    } else {
+        result.innerHTML = `❌ ผิด! คำตอบคือ "${correctAnswer}"`;
+        result.style.color = "red";
+    }
+
+    document.getElementById("nextButton").style.display = "inline-block";
+}
+
+function showFinalScore() {
+    document.getElementById("word").innerHTML = "🎉 จบการทดสอบ!";
+    document.getElementById("choices").innerHTML = "";
+    document.getElementById("result").innerHTML =
+        `คุณได้ ${score} / ${questionCount} คะแนน`;
+    document.getElementById("nextButton").innerHTML = "🔄 เริ่มใหม่";
+    document.getElementById("nextButton").style.display = "inline-block";
+    document.getElementById("nextButton").onclick = restartQuiz;
+}
+
+function restartQuiz() {
+    score = 0;
+    questionCount = 0;
+    usedWords = [];
+
+    document.getElementById("score").innerHTML = "0";
+    document.getElementById("nextButton").innerHTML = "ข้อต่อไป →";
+    document.getElementById("nextButton").onclick = nextQuestion;
+
+    nextQuestion();
+}
+
+nextQuestion();
+</script>
+</body>
+</html>
